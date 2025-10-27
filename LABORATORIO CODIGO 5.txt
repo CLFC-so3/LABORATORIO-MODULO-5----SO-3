@@ -1,0 +1,160 @@
+Video 1
+
+mkdir -p /home/carlos/Escritorio/archivos
+cd /Escritorio/archivos
+touch prueba_{001..100}.txt
+ssh-keygen -t rsa -b 2048
+ssh-copy-id carlos@10.0.0.70
+ssh carlos@10.0.0.70
+rsync -avz ~/Escritorio/archivos/ carlos@10.0.0.70:/home/carlos/Escritorio/archivos/
+nano /sync_archivos.sh
+rsync -avz /home/carlos/Escritorio/archivos/ carlos@10.0.0.70:/home/carlos/Escritorio/archivos/
+chmod +x ~/sync_archivos.sh
+crontab -e
+# * * * * * /home/carlos/sync_archivos.sh
+touch ~/Escritorio/archivos/archivo_nuevo.txt
+ls /home/carlos/Escritorio/archivos/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Video 2
+sudo dnf install -y pacemaker pcs corosync
+sudo systemctl enable --now pcsd
+sudo passwd hacluster
+
+# En nodo1 (10.0.0.69)
+sudo hostnamectl set-hostname nodo1
+
+# En nodo2 (10.0.0.70)
+sudo hostnamectl set-hostname nodo2
+
+# Editar /etc/hosts en ambos nodos
+# Agregar:
+# 10.0.0.69 nodo1
+# 10.0.0.70 nodo2
+
+# Autenticación desde nodo1
+sudo pcs host auth 10.0.0.69 10.0.0.70 -u hacluster
+
+# Crear clúster 
+sudo pcs cluster setup CLUSTER_FEDORA nodo1=10.0.0.69 nodo2=10.0.0.70
+sudo pcs cluster start --all
+
+# Desactivar STONITH y quorum
+sudo pcs property set stonith-enabled=false
+sudo pcs property set no-quorum-policy=ignore
+
+# Crear recurso IP flotante (ajustar interfaz según hipervisor)
+# VMware:
+sudo pcs resource create IPflotante ocf:heartbeat:IPaddr2 ip=10.0.0.111 cidr_netmask=24 nic=ens160 op monitor interval=30s
+# VirtualBox:
+sudo pcs resource create IPflotante ocf:heartbeat:IPaddr2 ip=10.0.0.101 cidr_netmask=24 nic=enp0s10 op monitor interval=30s
+
+# Verificar estado del clúster
+sudo pcs status
+
+# Verificar IP flotante activa
+ip a | grep 10.0.0.111
+
+# Simular caída sin reiniciar
+sudo pcs cluster stop --node $(hostname)
+
+# Reactivar nodo
+sudo pcs cluster start --node $(hostname)
+
+# Banear recurso para forzar migración
+sudo pcs resource ban IPflotante $(hostname)
+
+# Limpiar restricción
+sudo pcs resource clear IPflotante
+
+# Probar ping desde otra máquina
+ping 10.0.0.101
+
+
+
+
+
+
+
+Video 3
+Dnf install httpd* -y
+Mkdir -p /var/www/server1/html
+Nano /var/www/server1/html/index.html
+
+<!DOCTYPE html>
+<html>
+<body>
+<head> SERVIDOR 1 </head>
+</body>
+</html>
+
+Nano /etc/httpd/conf.d/server1.conf
+<VirtualHost *:80>
+ServerName localhost
+DocumentRoot /var/www/server1/html
+</VirtualHost>
+
+Nano /etc/httpd/conf/httpd.conf
+Verificar listen *:80
+
+Systemctl restart httpd
+
+
+
+
+
+
+
+
+
+
+Dnf install keepalived* -y
+Nano /etc/keepalived/keepalived.conf
+global_defs {
+    router_id SERVER1
+}
+
+vrrp_script check_service {
+    script "/usr/bin/killall -0 httpd" 
+    interval 2
+    weight 2
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface ens160
+    virtual_router_id 51
+    priority 150
+    advert_int 1
+
+    authentication {
+        auth_type PASS
+       auth_pass 1111
+}
+
+virtual_ipaddress {
+10.0.0.150/24
+}
+
+track_script {
+check_service
+}
+}
+
+Systemctl restart keepalived
+Systemctl enable keepalived
+
+
+
