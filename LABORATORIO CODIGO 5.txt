@@ -1,32 +1,51 @@
 Video 1
 
-mkdir -p /home/carlos/Escritorio/archivos
-cd /Escritorio/archivos
-touch prueba_{001..100}.txt
+rsync
+
+Ambos Fedora: 
+dnf install rsync* -y
+
+Fedora 1 (10.0.0.70):
+
+cd Escritorio
+mkdir -p repaso
+cd repaso
+touch carlos{1..100}.txt
+
 ssh-keygen -t rsa -b 2048
-ssh-copy-id carlos@10.0.0.70
-ssh carlos@10.0.0.70
-rsync -avz ~/Escritorio/archivos/ carlos@10.0.0.70:/home/carlos/Escritorio/archivos/
-nano /sync_archivos.sh
-rsync -avz /home/carlos/Escritorio/archivos/ carlos@10.0.0.70:/home/carlos/Escritorio/archivos/
-chmod +x ~/sync_archivos.sh
+Enter
+yes (en caso de reemplazar)
+Enter
+Enter
+
+ssh-copy-id carlos@10.0.0.69
+poner contrase帽a de 10.0.0.69
+
+rsync -avz ./Escritorio/repaso carlos@10.0.0.69:/home/carlos/Escritorio/repaso
+
+l贸gica del c贸digo:
+primero la ruta de la carpeta a enviar + ssh objetivo@ip_objetivo:la_ruta_donde_lo_quieres_guardar
+
+cd /home/Carlos/Escritorio
+
+---------------------------------------------------------
+nano automatico.sh
+rsync -avz /home/carlos/Escritorio/repaso carlos@10.0.0.69:/home/carlos/Escritorio/
+
+ctrl + o
+enter 
+ctrl + x
+---------------------------------------------------------
+bash automatico.sh
+
+---------------------------------------------------------------------------------
 crontab -e
-# * * * * * /home/carlos/sync_archivos.sh
-touch ~/Escritorio/archivos/archivo_nuevo.txt
-ls /home/carlos/Escritorio/archivos/
+rsync -avz /home/carlos/Escritorio/repaso carlos@10.0.0.69:/home/carlos/Escritorio/
+-----------------------------------------------------------------------------------
 
-
-
-
-
-
-
-
-
-
-
-
-
+#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/
+#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/
+#/#/#/#/#/#/#/#/#/#/#/#/#/#/
 
 Video 2
 sudo dnf install -y pacemaker pcs corosync
@@ -44,10 +63,10 @@ sudo hostnamectl set-hostname nodo2
 # 10.0.0.69 nodo1
 # 10.0.0.70 nodo2
 
-# Autenticaci髇 desde nodo1
+# Autenticaci贸n desde nodo1
 sudo pcs host auth 10.0.0.69 10.0.0.70 -u hacluster
 
-# Crear cl鷖ter 
+# Crear cl煤ster 
 sudo pcs cluster setup CLUSTER_FEDORA nodo1=10.0.0.69 nodo2=10.0.0.70
 sudo pcs cluster start --all
 
@@ -55,31 +74,31 @@ sudo pcs cluster start --all
 sudo pcs property set stonith-enabled=false
 sudo pcs property set no-quorum-policy=ignore
 
-# Crear recurso IP flotante (ajustar interfaz seg鷑 hipervisor)
+# Crear recurso IP flotante (ajustar interfaz seg煤n hipervisor)
 # VMware:
 sudo pcs resource create IPflotante ocf:heartbeat:IPaddr2 ip=10.0.0.111 cidr_netmask=24 nic=ens160 op monitor interval=30s
 # VirtualBox:
 sudo pcs resource create IPflotante ocf:heartbeat:IPaddr2 ip=10.0.0.101 cidr_netmask=24 nic=enp0s10 op monitor interval=30s
 
-# Verificar estado del cl鷖ter
+# Verificar estado del cl煤ster
 sudo pcs status
 
 # Verificar IP flotante activa
 ip a | grep 10.0.0.111
 
-# Simular ca韉a sin reiniciar
+# Simular ca铆da sin reiniciar
 sudo pcs cluster stop --node $(hostname)
 
 # Reactivar nodo
 sudo pcs cluster start --node $(hostname)
 
-# Banear recurso para forzar migraci髇
+# Banear recurso para forzar migraci贸n
 sudo pcs resource ban IPflotante $(hostname)
 
-# Limpiar restricci髇
+# Limpiar restricci贸n
 sudo pcs resource clear IPflotante
 
-# Probar ping desde otra m醧uina
+# Probar ping desde otra m谩quina
 ping 10.0.0.101
 
 
@@ -155,6 +174,7 @@ check_service
 
 Systemctl restart keepalived
 Systemctl enable keepalived
+
 
 
 
