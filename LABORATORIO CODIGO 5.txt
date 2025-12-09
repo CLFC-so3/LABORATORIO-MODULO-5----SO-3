@@ -54,13 +54,7 @@ dnf install pacemaker* pcs* corosync* -y
 
 systemctl enable pcsd
 systemctl start pcsd
-systemctl enable corosync
-systemctl start corosync
-systemctl enable pacemaker
-systemctl start pacemaker
-systemctl status pcsd
-systemctl status corosync
-systemctl status pacemaker
+
 
 sudo firewall-cmd --permanent --add-port=2224/tcp
 sudo firewall-cmd --reload
@@ -80,8 +74,12 @@ nano /etc/hosts
 -----------------------------------------------------
 Fedora nodo1:
 
-sudo pcs host auth nodo1 nodo2 -u hacluster -p 1
+hostnamectl set-hostname nodo1 (Para Fedora 1)
+hostnamectl set-hostname nodo2 (Para Fedora 2)
+
+sudo pcs host auth 10.0.0.69 10.0.0.70 -u hacluster -p 1
 sudo pcs cluster setup CLUSTER_REPASO nodo1 nodo2
+
 
 ("concepto si usas nodo1 nodo2 en uno, úsalo en el otro
 si usas las ips en lo de arriba, usalas en lo de abajo")
@@ -105,6 +103,14 @@ sudo pcs status
 
 ### verificar que la ip se cambia de un nodo al otro usando el siguiente comando en el nodo que la tenga la ip en ese momento:
 systemctl restart pacemaker
+
+systemctl enable corosync
+systemctl start corosync
+systemctl enable pacemaker
+systemctl start pacemaker
+systemctl status pcsd
+systemctl status corosync
+systemctl status pacemaker
 
 #/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/
 
@@ -293,6 +299,7 @@ ctrl + x
 systemctl restart httpd
 systemctl restart keepalived
 setenforce 0
+
 
 
 
