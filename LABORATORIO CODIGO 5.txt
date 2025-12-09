@@ -58,8 +58,6 @@ systemctl start pcsd
 
 sudo firewall-cmd --permanent --add-port=2224/tcp
 sudo firewall-cmd --reload
-sudo pcs property set stonith-enabled=false
-sudo pcs property set no-quorum-policy=ignore
 
 passwd hacluster
 1
@@ -304,6 +302,7 @@ ctrl + x
 systemctl restart httpd
 systemctl restart keepalived
 setenforce 0
+
 
 
 
