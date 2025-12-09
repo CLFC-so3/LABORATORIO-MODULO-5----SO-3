@@ -131,6 +131,11 @@ firewall-cmd --permanent --zone=public --add-port=81/tcp
 firewall-cmd --permanent --zone=public --add-service=http
 firewall-cmd --permanent --zone=public --add-service=https
 firewall-cmd --permanent --zone=public --add-protocol=vrrp
+firewall-cmd --permanent  --add-port=80/tcp
+firewall-cmd --permanent  --add-port=81/tcp
+firewall-cmd --permanent  --add-service=http
+firewall-cmd --permanent  --add-service=https
+firewall-cmd --permanent  --add-protocol=vrrp
 firewall-cmd --reload
 
 systemctl status keepalived
@@ -299,6 +304,7 @@ ctrl + x
 systemctl restart httpd
 systemctl restart keepalived
 setenforce 0
+
 
 
 
