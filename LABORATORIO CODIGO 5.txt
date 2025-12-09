@@ -76,7 +76,7 @@ hostnamectl set-hostname nodo1 (Para Fedora 1)
 hostnamectl set-hostname nodo2 (Para Fedora 2)
 
 sudo pcs host auth 10.0.0.69 10.0.0.70 -u hacluster -p 1
-sudo pcs cluster setup CLUSTER_REPASO nodo1 nodo2
+sudo pcs cluster setup CLUSTER_REPASO 10.0.0.69 10.0.0.70
 
 
 ("concepto si usas nodo1 nodo2 en uno, úsalo en el otro
@@ -302,6 +302,7 @@ ctrl + x
 systemctl restart httpd
 systemctl restart keepalived
 setenforce 0
+
 
 
 
