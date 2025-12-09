@@ -111,9 +111,31 @@ systemctl restart pacemaker
 
 
 Video 3
-Dnf install httpd* -y
-Mkdir -p /var/www/server1/html
-Nano /var/www/server1/html/index.html
+keepalived
+
+Ambos fedora:
+
+dnf install httpd* keepalived* -y
+systemctl enable keepalived
+systemctl enable httpd
+systemctl start httpd
+
+firewall-cmd --permanent --zone=public --add-port=80/tcp
+firewall-cmd --permanent --zone=public --add-port=81/tcp
+firewall-cmd --permanent --zone=public --add-service=http
+firewall-cmd --permanent --zone=public --add-service=https
+firewall-cmd --permanent --zone=public --add-protocol=vrrp
+firewall-cmd --reload
+
+systemctl status keepalived
+systemctl status httpd
+
+----------------------------------------------------------------------------
+Fedora 10.0.0.70:
+
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+mkdir -p /var/www/server1/html
+nano /var/www/server1/html/index.html
 
 <!DOCTYPE html>
 <html>
@@ -122,28 +144,32 @@ Nano /var/www/server1/html/index.html
 </body>
 </html>
 
-Nano /etc/httpd/conf.d/server1.conf
-<VirtualHost *:80>
+ctrl + o
+enter 
+ctrl + x
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+
+-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.
+nano /etc/httpd/conf.d/server1.conf
+
+<VirtualHost *:81>
 ServerName localhost
 DocumentRoot /var/www/server1/html
 </VirtualHost>
 
-Nano /etc/httpd/conf/httpd.conf
-Verificar listen *:80
+ctrl + o
+enter 
+ctrl + x
+-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.
 
-Systemctl restart httpd
+-------------------------------------------------
+nano /etc/httpd/conf/httpd.conf
+# Agregar Listen 81 a nuestra lista de listens
+-------------------------------------------------
 
+nano /etc/keepalived/keepalived.conf
+ELIMINARLE TODO Y PONERLE
 
-
-
-
-
-
-
-
-
-Dnf install keepalived* -y
-Nano /etc/keepalived/keepalived.conf
 global_defs {
     router_id SERVER1
 }
@@ -158,6 +184,7 @@ vrrp_instance VI_1 {
     state MASTER
     interface ens160
     virtual_router_id 51
+    nopreempt
     priority 150
     advert_int 1
 
@@ -175,8 +202,102 @@ check_service
 }
 }
 
-Systemctl restart keepalived
-Systemctl enable keepalived
+ctrl + o
+enter 
+ctrl + x
+
+-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.
+systemctl restart httpd
+systemctl restart keepalived
+sudo setenforce 0
+
+
+
+
+.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#
+Fedora 10.0.0.69:
+
+mkdir -p /var/www/server2/html
+nano /var/www/server2/html/index.html
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+<!DOCTYPE html>
+<html>
+<body>
+<head> SERVIDOR 2 </head>
+</body>
+</html>
+
+ctrl + o
+enter 
+ctrl + x
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+nano /etc/httpd/conf.d/server2.conf
+
+<VirtualHost *:81>
+ServerName localhost
+DocumentRoot /var/www/server2/html
+</VirtualHost>
+
+ctrl + o
+enter 
+ctrl + x
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+
+
+-------------------------------------------------
+nano /etc/httpd/conf/httpd.conf
+# Agregar Listen 81 a nuestra lista de listens
+-------------------------------------------------
+
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+nano /etc/keepalived/keepalived.conf
+
+global_defs {
+    router_id SERVER2
+}
+
+vrrp_script check_service {
+    script "/usr/bin/killall -0 httpd" 
+    interval 2
+    weight 2
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface ens160
+    virtual_router_id 51
+    nopreempt
+    priority 100
+    advert_int 1
+
+    authentication {
+        auth_type PASS
+       auth_pass 1111
+}
+
+virtual_ipaddress {
+10.0.0.150/24
+}
+
+track_script {
+check_service
+}
+}
+
+ctrl + o
+enter 
+ctrl + x
+.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
+systemctl restart httpd
+systemctl restart keepalived
+setenforce 0
+
+
+
+
+
 
 
 
