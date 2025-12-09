@@ -43,67 +43,70 @@ crontab -e
 rsync -avz /home/carlos/Escritorio/repaso carlos@10.0.0.69:/home/carlos/Escritorio/
 -----------------------------------------------------------------------------------
 
-#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/
-#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/
-#/#/#/#/#/#/#/#/#/#/#/#/#/#/
+#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/
 
 Video 2
-sudo dnf install -y pacemaker pcs corosync
-sudo systemctl enable --now pcsd
-sudo passwd hacluster
+pacemaker
 
-# En nodo1 (10.0.0.69)
-sudo hostnamectl set-hostname nodo1
+Ambos fedora:
 
-# En nodo2 (10.0.0.70)
-sudo hostnamectl set-hostname nodo2
+dnf install pacemaker* pcs* corosync* -y
 
-# Editar /etc/hosts en ambos nodos
-# Agregar:
-# 10.0.0.69 nodo1
-# 10.0.0.70 nodo2
+systemctl enable pcsd
+systemctl start pcsd
+systemctl enable corosync
+systemctl start corosync
+systemctl enable pacemaker
+systemctl start pacemaker
+systemctl status pcsd
+systemctl status corosync
+systemctl status pacemaker
 
-# Autenticación desde nodo1
-sudo pcs host auth 10.0.0.69 10.0.0.70 -u hacluster
-
-# Crear clúster 
-sudo pcs cluster setup CLUSTER_FEDORA nodo1=10.0.0.69 nodo2=10.0.0.70
-sudo pcs cluster start --all
-
-# Desactivar STONITH y quorum
+sudo firewall-cmd --permanent --add-port=2224/tcp
+sudo firewall-cmd --reload
 sudo pcs property set stonith-enabled=false
 sudo pcs property set no-quorum-policy=ignore
 
+passwd hacluster
+1
+
+-----------------------------------------------------
+nano /etc/hosts
+
+#Agregar
+
+10.0.0.69 nodo1
+10.0.0.70 nodo2
+-----------------------------------------------------
+Fedora nodo1:
+
+sudo pcs host auth nodo1 nodo2 -u hacluster -p 1
+sudo pcs cluster setup CLUSTER_REPASO nodo1 nodo2
+
+("concepto si usas nodo1 nodo2 en uno, úsalo en el otro
+si usas las ips en lo de arriba, usalas en lo de abajo")
+
+sudo pcs cluster start --all
+
+sudo pcs property set stonith-enabled=false
+sudo pcs property set no-quorum-policy=ignore
+
+-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.
 # Crear recurso IP flotante (ajustar interfaz según hipervisor)
 # VMware:
 sudo pcs resource create IPflotante ocf:heartbeat:IPaddr2 ip=10.0.0.111 cidr_netmask=24 nic=ens160 op monitor interval=30s
+
+
 # VirtualBox:
 sudo pcs resource create IPflotante ocf:heartbeat:IPaddr2 ip=10.0.0.101 cidr_netmask=24 nic=enp0s10 op monitor interval=30s
-
-# Verificar estado del clúster
+-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.
 sudo pcs status
 
-# Verificar IP flotante activa
-ip a | grep 10.0.0.111
 
-# Simular caída sin reiniciar
-sudo pcs cluster stop --node $(hostname)
+### verificar que la ip se cambia de un nodo al otro usando el siguiente comando en el nodo que la tenga la ip en ese momento:
+systemctl restart pacemaker
 
-# Reactivar nodo
-sudo pcs cluster start --node $(hostname)
-
-# Banear recurso para forzar migración
-sudo pcs resource ban IPflotante $(hostname)
-
-# Limpiar restricción
-sudo pcs resource clear IPflotante
-
-# Probar ping desde otra máquina
-ping 10.0.0.101
-
-
-
-
+#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/#/
 
 
 
@@ -174,6 +177,7 @@ check_service
 
 Systemctl restart keepalived
 Systemctl enable keepalived
+
 
 
 
