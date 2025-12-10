@@ -305,6 +305,380 @@ setenforce 0
 
 
 
+#_____________________________________________________________________POR SI ACASO______________________________________________________________________# 
+
+keepalived + docker + nginx 
+
+# ============================================================================
+# CONFIGURACIÓN DE ALTA DISPONIBILIDAD CON NGINX Y KEEPALIVED
+# Estudiante: Carlos Luis Feliz Catano | Matrícula: 2025-0892
+# 
+# IMPORTANTE: Ajusta las IPs según tu red antes de ejecutar
+# - IPs reales de servidores (ej: 192.168.1.10 y 192.168.1.11)
+# - IP Virtual (VIP): 192.168.1.100
+# - Interfaz de red: eth0 (verifica con 'ip a')
+# ============================================================================
+
+# ============================================================================
+# SERVIDOR 1 (MASTER)
+# ============================================================================
+
+# --- Instalación de paquetes ---
+sudo apt update && sudo apt upgrade -y
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo apt install docker-compose keepalived -y
+
+# --- Crear estructura de archivos ---
+mkdir -p ~/nginx-ha/server1
+cd ~/nginx-ha/server1
+
+# --- Crear página HTML Servidor 1 ---
+cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servidor 1</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            font-size: 3em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .info {
+            font-size: 1.5em;
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .server-badge {
+            background: #4CAF50;
+            font-size: 2em;
+            padding: 15px 30px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ Servidor 1</h1>
+        <div class="info">
+            <div class="badge">Carlos Luis Feliz Catano</div>
+            <br>
+            <div class="badge">Matrícula: 2025-0892</div>
+        </div>
+        <div class="server-badge">SERVIDOR 1</div>
+        <p style="margin-top: 30px; font-size: 1.2em;">
+            ✅ Sistema de Alta Disponibilidad Activo
+        </p>
+    </div>
+</body>
+</html>
+EOF
+
+# --- Crear Docker Compose ---
+cat > docker-compose.yml << 'EOF'
+version: '3'
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx-server1
+    ports:
+      - "80:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    restart: always
+EOF
+
+# --- Iniciar contenedor NGINX ---
+sudo docker-compose up -d
+
+# --- Configurar Keepalived ---
+sudo tee /etc/keepalived/keepalived.conf > /dev/null << 'EOF'
+vrrp_script chk_nginx {
+    script "/usr/bin/docker ps | grep nginx-server1"
+    interval 2
+    weight -20
+}
+
+vrrp_instance VI_1 {
+    state MASTER
+    interface eth0
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+    
+    authentication {
+        auth_type PASS
+        auth_pass 1234
+    }
+    
+    virtual_ipaddress {
+        192.168.1.100/24
+    }
+    
+    track_script {
+        chk_nginx
+    }
+}
+EOF
+
+# --- Iniciar Keepalived ---
+sudo systemctl enable keepalived
+sudo systemctl start keepalived
+sudo systemctl status keepalived
+
+# --- Verificar configuración ---
+ip addr show
+sudo docker ps
+
+
+# ============================================================================
+# SERVIDOR 2 (BACKUP)
+# ============================================================================
+
+# --- Instalación de paquetes ---
+sudo apt update && sudo apt upgrade -y
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo apt install docker-compose keepalived -y
+
+# --- Crear estructura de archivos ---
+mkdir -p ~/nginx-ha/server2
+cd ~/nginx-ha/server2
+
+# --- Crear página HTML Servidor 2 ---
+cat > index.html << 'EOF'
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servidor 2</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            text-align: center;
+            max-width: 600px;
+        }
+        h1 {
+            font-size: 3em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .info {
+            font-size: 1.5em;
+            margin: 20px 0;
+            line-height: 1.6;
+        }
+        .badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .server-badge {
+            background: #FF5722;
+            font-size: 2em;
+            padding: 15px 30px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ Servidor 2</h1>
+        <div class="info">
+            <div class="badge">Carlos Luis Feliz Catano</div>
+            <br>
+            <div class="badge">Matrícula: 2025-0892</div>
+        </div>
+        <div class="server-badge">SERVIDOR 2</div>
+        <p style="margin-top: 30px; font-size: 1.2em;">
+            ✅ Sistema de Alta Disponibilidad Activo
+        </p>
+    </div>
+</body>
+</html>
+EOF
+
+# --- Crear Docker Compose ---
+cat > docker-compose.yml << 'EOF'
+version: '3'
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx-server2
+    ports:
+      - "80:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    restart: always
+EOF
+
+# --- Iniciar contenedor NGINX ---
+sudo docker-compose up -d
+
+# --- Configurar Keepalived ---
+sudo tee /etc/keepalived/keepalived.conf > /dev/null << 'EOF'
+vrrp_script chk_nginx {
+    script "/usr/bin/docker ps | grep nginx-server2"
+    interval 2
+    weight -20
+}
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface eth0
+    virtual_router_id 51
+    priority 90
+    advert_int 1
+    
+    authentication {
+        auth_type PASS
+        auth_pass 1234
+    }
+    
+    virtual_ipaddress {
+        192.168.1.100/24
+    }
+    
+    track_script {
+        chk_nginx
+    }
+}
+EOF
+
+# --- Iniciar Keepalived ---
+sudo systemctl enable keepalived
+sudo systemctl start keepalived
+sudo systemctl status keepalived
+
+# --- Verificar configuración ---
+ip addr show
+sudo docker ps
+
+
+# ============================================================================
+# PRUEBAS DE ALTA DISPONIBILIDAD
+# ============================================================================
+
+# --- Acceder al servicio ---
+# Abrir navegador: http://192.168.1.100
+# Deberías ver la página del Servidor 1 (fondo morado)
+
+# --- Simular fallo del Servidor 1 (ejecutar en Servidor 1) ---
+sudo docker stop nginx-server1
+# O apagar el servidor:
+# sudo shutdown -h now
+
+# --- Verificar failover ---
+# Refrescar navegador en http://192.168.1.100
+# Ahora deberías ver Servidor 2 (fondo rojo/rosa)
+
+# --- Restaurar Servidor 1 ---
+cd ~/nginx-ha/server1
+sudo docker-compose up -d
+
+# La IP virtual volverá automáticamente al Servidor 1
+
+
+# ============================================================================
+# COMANDOS ÚTILES DE MONITOREO
+# ============================================================================
+
+# Ver estado de Keepalived
+sudo systemctl status keepalived
+
+# Ver logs de Keepalived
+sudo journalctl -u keepalived -f
+
+# Ver contenedores Docker
+sudo docker ps
+
+# Ver logs de NGINX
+sudo docker logs nginx-server1
+sudo docker logs nginx-server2
+
+# Ver IPs asignadas (la VIP debe estar en el MASTER)
+ip addr show
+
+# Monitorear tráfico VRRP
+sudo tcpdump -i eth0 vrrp
+
+# Verificar conectividad a la VIP
+ping 192.168.1.100
+
+# Ver qué servidor tiene la VIP actualmente
+ip addr show | grep 192.168.1.100
+
+
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+
+# Si la IP virtual no aparece:
+# 1. Verificar interfaz de red correcta
+ip a
+
+# 2. Permitir VRRP en firewall
+sudo ufw allow vrrp
+
+# 3. Verificar que ambos servidores estén en la misma red
+
+# Si no hay failover:
+# 1. Verificar logs
+sudo journalctl -u keepalived -n 50
+
+# 2. Verificar que virtual_router_id sea igual en ambos servidores
+
+# 3. Verificar autenticación coincida en ambos
 
 
 
